@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal.Internal;
+using UnityEngine.Windows;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class PlayerMovement : MonoBehaviour
     public float gravity = -9.81f;
     public float jumpHeight = 2f;
     public float sprintSpeed = 8f;
-
+    private Vector3 movement;
 
     public float speed = 5f;
     public Transform cameraTransform;
@@ -36,47 +37,30 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Jump()
     {
-        verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        if (controls.Player.Jump.WasPressedThisFrame()
+            && controller.isGrounded)
+        {
+            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+        
     }
-
-
-    private void Update()
+    private void CameraMovement()
     {
         Vector2 input = controls.Player.Move.ReadValue<Vector2>();
-        
+
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
+
         forward.y = 0;
         right.y = 0;
 
         forward.Normalize();
         right.Normalize();
 
-        Vector3 movement = forward * input.y + right * input.x;
-        
-        float currentSpeed = speed;
-
-        if (controls.Player.Sprint.IsPressed())
-        {
-            currentSpeed = sprintSpeed;
-        }
-
-        movement *= currentSpeed;
-
-        if (controller.isGrounded && verticalVelocity < 0)
-        {
-            verticalVelocity = -2f;
-        }
-        verticalVelocity += gravity * Time.deltaTime;
-        movement.y = verticalVelocity;
-        controller.Move(movement * Time.deltaTime);
-
-        if(controls.Player.Jump.WasPressedThisFrame()
-            && controller.isGrounded)
-        {
-            Jump();
-        }
-
+        movement = forward * input.y + right * input.x;
+    }
+    private void CameraRotationDirection()
+    {
         Vector3 rotationDirection = new Vector3(movement.x, 0f, movement.z);
 
         if (rotationDirection.sqrMagnitude > 0.001f)
@@ -89,7 +73,38 @@ public class PlayerMovement : MonoBehaviour
                 rotationSpeed * Time.deltaTime
             );
         }
-        
+    }
+    private void Fall()
+    {
+        if (controller.isGrounded && verticalVelocity < 0)
+        {
+            verticalVelocity = -2f;
+        }
+        verticalVelocity += gravity * Time.deltaTime;
+        movement.y = verticalVelocity;
+        controller.Move(movement * Time.deltaTime);
+    }
+
+    private void Update()
+    {
+        CameraMovement();
+
+        float currentSpeed = speed;
+
+        if (controls.Player.Sprint.IsPressed())
+        {
+            currentSpeed = sprintSpeed;
+        }
+
+        movement *= currentSpeed;
+
+        Fall();
+
+        Jump();
+
+        CameraRotationDirection();
+
+
 
 
     }
